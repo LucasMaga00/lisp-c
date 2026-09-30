@@ -1,8 +1,8 @@
 CC = cc
-CFLAGS = -std=c17 -Wall -Wextra -Wpedantic -g
+CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -g
 
-program: src/main.c Makefile
-	$(CC) $(CFLAGS) src/main.c -o program -ledit
+program: src/main.c src/mpc.c src/mpc.h Makefile
+	$(CC) $(CFLAGS) src/main.c src/mpc.c -o program -ledit -lm
 
 .PHONY: run
 run: program
