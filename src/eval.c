@@ -2,6 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define LASSERT(args, cond, err)                                               \
+  if (!(cond)) {                                                               \
+    lval_del(args);                                                            \
+    return lval_err(err);                                                      \
+  }
+
 lval *lval_eval_sexpr(lval *v) {
   for (int i = 0; i < v->count; i++) {
     v->cell[i] = lval_eval(v->cell[i]);
@@ -28,7 +34,7 @@ lval *lval_eval_sexpr(lval *v) {
     return lval_err("S-expression Does not start with symbol!");
   }
 
-  lval *result = builtin_op(v, f->sym);
+  lval *result = builtin(v, f->sym);
   lval_del(f);
   return result;
 }
@@ -40,43 +46,11 @@ lval *lval_eval(lval *v) {
   return v;
 }
 
-lval *builtin_op(lval *a, char *op) {
-  for (int i = 0; i < a->count; i++) {
-    if (a->cell[i]->type != LVAL_NUM) {
-      lval_del(a);
-      return lval_err("Cannot operate on non-number!");
-    }
+lval *lval_join(lval *x, lval *y) {
+  while (y->count) {
+    x = lval_add(x, lval_pop(y, 0));
   }
-
-  lval *x = lval_pop(a, 0);
-
-  if ((strcmp(op, "-") == 0) && a->count == 0) {
-    x->num = -x->num;
-  }
-
-  while (a->count > 0) {
-    lval *y = lval_pop(a, 0);
-    if (strcmp(op, "+") == 0) {
-      x->num += y->num;
-    }
-    if (strcmp(op, "-") == 0) {
-      x->num -= y->num;
-    }
-    if (strcmp(op, "*") == 0) {
-      x->num *= y->num;
-    }
-    if (strcmp(op, "/") == 0) {
-      if (y->num == 0) {
-        lval_del(x);
-        lval_del(y);
-        x = lval_err("Division by Zero!");
-        break;
-      }
-      x->num /= y->num;
-    }
-    lval_del(y);
-  }
-  lval_del(a);
+  lval_del(y);
   return x;
 }
 
@@ -172,6 +146,137 @@ lval *lval_add(lval *v, lval *x) {
   return v;
 }
 
+lval *lval_pop(lval *v, int i) {
+  lval *x = v->cell[i];
+  memmove(&v->cell[i], &v->cell[i + 1], sizeof(lval *) * (v->count - i - 1));
+  v->count--;
+  v->cell = realloc(v->cell, sizeof(lval *) * v->count);
+  return x;
+}
+
+lval *lval_take(lval *v, int i) {
+  lval *x = lval_pop(v, i);
+  lval_del(v);
+  return x;
+}
+
+lval *builtin(lval *a, char *func) {
+  if (strcmp("list", func) == 0) {
+    return builtin_list(a);
+  }
+  if (strcmp("head", func) == 0) {
+    return builtin_head(a);
+  }
+  if (strcmp("tail", func) == 0) {
+    return builtin_tail(a);
+  }
+  if (strcmp("join", func) == 0) {
+    return builtin_join(a);
+  }
+  if (strcmp("eval", func) == 0) {
+    return builtin_eval(a);
+  }
+  if (strstr("+-/*", func)) {
+    return builtin_op(a, func);
+  }
+  lval_del(a);
+  return lval_err("Unknown Function!");
+}
+
+lval *builtin_op(lval *a, char *op) {
+  for (int i = 0; i < a->count; i++) {
+    if (a->cell[i]->type != LVAL_NUM) {
+      lval_del(a);
+      return lval_err("Cannot operate on non-number!");
+    }
+  }
+
+  lval *x = lval_pop(a, 0);
+
+  if ((strcmp(op, "-") == 0) && a->count == 0) {
+    x->num = -x->num;
+  }
+
+  while (a->count > 0) {
+    lval *y = lval_pop(a, 0);
+    if (strcmp(op, "+") == 0) {
+      x->num += y->num;
+    }
+    if (strcmp(op, "-") == 0) {
+      x->num -= y->num;
+    }
+    if (strcmp(op, "*") == 0) {
+      x->num *= y->num;
+    }
+    if (strcmp(op, "/") == 0) {
+      if (y->num == 0) {
+        lval_del(x);
+        lval_del(y);
+        x = lval_err("Division by Zero!");
+        break;
+      }
+      x->num /= y->num;
+    }
+    lval_del(y);
+  }
+  lval_del(a);
+  return x;
+}
+
+lval *builtin_head(lval *a) {
+  LASSERT(a, a->count == 1, "Function 'head' passed too many arguments!");
+  LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
+          "Function 'head' passed incorrect types!");
+  LASSERT(a, a->cell[0]->count != 0, "Function 'head' passed {}!");
+
+  lval *v = lval_take(a, 0);
+  while (v->count > 1) {
+    lval_del(lval_pop(v, 1));
+  }
+  return v;
+}
+
+lval *builtin_tail(lval *a) {
+  LASSERT(a, a->count == 1, "Function 'tail' passed too many arguments!");
+  LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
+          "Function 'tail' passed incorrect types!");
+  LASSERT(a, a->cell[0]->count != 0, "Function 'tail' passed {}!");
+
+  lval *v = lval_take(a, 0);
+  lval_del(lval_pop(v, 0));
+  return v;
+}
+
+lval *builtin_list(lval *a) {
+  a->type = LVAL_QEXPR;
+  return a;
+}
+
+lval *builtin_eval(lval *a) {
+  LASSERT(a, a->count == 1, "Function 'eval' passed too many arguments!");
+  LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
+          "Function 'eval' passed incorrect types!");
+
+  lval *x = lval_take(a, 0);
+  x->type = LVAL_SEXPR;
+  return lval_eval(x);
+}
+
+lval *builtin_join(lval *a) {
+  for (int i = 0; i < a->count; i++) {
+    LASSERT(a, a->cell[i]->type == LVAL_QEXPR,
+            "Function 'join' passed incorrect types!");
+  }
+
+  lval *x = lval_pop(a, 0);
+  while (a->count) {
+    x = lval_join(x, lval_pop(a, 0));
+  }
+
+  lval_del(a);
+  return x;
+}
+
 int count_leaves(mpc_ast_t *t) {
   if (t->children_num == 0) {
     return 1;
@@ -240,18 +345,4 @@ void lval_del(lval *v) {
     break;
   }
   free(v);
-}
-
-lval *lval_pop(lval *v, int i) {
-  lval *x = v->cell[i];
-  memmove(&v->cell[i], &v->cell[i + 1], sizeof(lval *) * (v->count - i - 1));
-  v->count--;
-  v->cell = realloc(v->cell, sizeof(lval *) * v->count);
-  return x;
-}
-
-lval *lval_take(lval *v, int i) {
-  lval *x = lval_pop(v, i);
-  lval_del(v);
-  return x;
 }

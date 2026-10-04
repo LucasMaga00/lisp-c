@@ -16,9 +16,7 @@ typedef struct lval {
 
 lval *lval_eval_sexpr(lval *v);
 lval *lval_eval(lval *v);
-lval *builtin_op(lval *a, char *op);
-lval *builtin_head(lval *a);
-lval *builtin_tail(lval *a);
+lval *lval_join(lval *x, lval *y);
 lval *lval_num(long x);
 lval *lval_err(char *m);
 lval *lval_sym(char *s);
@@ -29,6 +27,14 @@ lval *lval_read(mpc_ast_t *t);
 lval *lval_add(lval *v, lval *x);
 lval *lval_pop(lval *v, int i);
 lval *lval_take(lval *v, int i);
+
+lval *builtin(lval *a, char *func);
+lval *builtin_op(lval *a, char *op);
+lval *builtin_head(lval *a);
+lval *builtin_tail(lval *a);
+lval *builtin_list(lval *a);
+lval *builtin_eval(lval *a);
+lval *builtin_join(lval *a);
 
 int count_leaves(mpc_ast_t *t);
 
