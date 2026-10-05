@@ -30,7 +30,7 @@ int main(void) {
 
   mpca_lang(MPCA_LANG_DEFAULT, "                                             \
     number   : /-?[0-9]+/ ;                               \
-    symbol   : '+' | '-' | '*' | '/'                      \
+    symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/           \
              | \"join\" | \"eval\" | \"list\"             \
              | \"head\" | \"tail\" ;                      \
     sexpr    : '(' <expr>* ')' ;                          \
@@ -45,6 +45,9 @@ int main(void) {
 
   el_set(el, EL_HIST, history, hist);
 
+  lenv *e = lenv_new();
+  lenv_add_builtins(e);
+
   while (1) {
     int count;
 
@@ -58,15 +61,17 @@ int main(void) {
     mpc_result_t r;
     if (mpc_parse("<stdin>", input, Lispy, &r)) {
       // mpc_ast_print(r.output);
-      lval *x = lval_eval(lval_read(r.output));
+      lval *x = lval_eval(e, lval_read(r.output));
       lval_println(x);
       lval_del(x);
+      mpc_ast_delete(r.output);
     } else {
       mpc_err_print(r.error);
       mpc_err_delete(r.error);
     }
   }
 
+  lenv_del(e);
   history_end(hist);
   el_end(el);
 
