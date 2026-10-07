@@ -1,0 +1,72 @@
+[
+  {
+    "directory": "/Users/lucasrodrigues/Projects/c-02-learning",
+    "file": "src/main.c",
+    "arguments": [
+      "cc",
+      "-std=c99",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-g",
+      "-c",
+      "src/main.c"
+    ]
+  },
+  {
+    "directory": "/Users/lucasrodrigues/Projects/c-02-learning",
+    "file": "src/eval.c",
+    "arguments": [
+      "cc",
+      "-std=c99",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-g",
+      "-c",
+      "src/eval.c"
+    ]
+  },
+  {
+    "directory": "/Users/lucasrodrigues/Projects/c-02-learning",
+    "file": "src/env.c",
+    "arguments": [
+      "cc",
+      "-std=c99",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-g",
+      "-c",
+      "src/env.c"
+    ]
+  },
+  {
+    "directory": "/Users/lucasrodrigues/Projects/c-02-learning",
+    "file": "src/builtin.c",
+    "arguments": [
+      "cc",
+      "-std=c99",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-g",
+      "-c",
+      "src/builtin.c"
+    ]
+  },
+  {
+    "directory": "/Users/lucasrodrigues/Projects/c-02-learning",
+    "file": "src/mpc.c",
+    "arguments": [
+      "cc",
+      "-std=c99",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-g",
+      "-c",
+      "src/mpc.c"
+    ]
+  }
+]

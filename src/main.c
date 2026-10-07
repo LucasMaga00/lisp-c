@@ -41,7 +41,7 @@ int main(void) {
   ",
             Number, Symbol, Sexpr, Qexpr, Expr, Lispy);
 
-  puts("Lispy Version 0.0.0.0.2");
+  puts("Lispy Version 0.0.0.0.5");
   puts("Press Ctrl+c to Exit\n");
 
   el_set(el, EL_HIST, history, hist);
