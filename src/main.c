@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "env.h"
 #include "eval.h"
 #include "mpc.h"
 #include <histedit.h>
@@ -60,7 +61,6 @@ int main(void) {
     history(hist, &ev, H_ENTER, input);
     mpc_result_t r;
     if (mpc_parse("<stdin>", input, Lispy, &r)) {
-      // mpc_ast_print(r.output);
       lval *x = lval_eval(e, lval_read(r.output));
       lval_println(x);
       lval_del(x);
@@ -75,6 +75,6 @@ int main(void) {
   history_end(hist);
   el_end(el);
 
-  mpc_cleanup(4, Number, Symbol, Sexpr, Qexpr, Expr, Lispy);
+  mpc_cleanup(6, Number, Symbol, Sexpr, Qexpr, Expr, Lispy);
   return 0;
 }
