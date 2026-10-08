@@ -27,6 +27,7 @@ struct lval {
 
 lval *lval_eval(lenv *e, lval *v);
 lval *lval_join(lval *x, lval *y);
+lval *lval_num(long x);
 lval *lval_err(char *fmt, ...);
 lval *lval_sym(char *s);
 lval *lval_sexpr(void);
@@ -37,6 +38,8 @@ lval *lval_add(lval *v, lval *x);
 lval *lval_pop(lval *v, int i);
 lval *lval_take(lval *v, int i);
 lval *lval_copy(lval *v);
+
+int lval_eq(lval *x, lval *y);
 
 void lval_println(lval *v);
 void lval_del(lval *v);

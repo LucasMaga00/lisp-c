@@ -63,7 +63,7 @@ lval *lval_join(lval *x, lval *y) {
   return x;
 }
 
-static lval *lval_num(long x) {
+lval *lval_num(long x) {
   lval *v = malloc(sizeof(lval));
   v->type = LVAL_NUM;
   v->num = x;
@@ -250,11 +250,40 @@ static lval *lval_call(lenv *e, lval *f, lval *a) {
     }
     lval *sym = lval_pop(f->formals, 0);
     lval *val = lval_pop(a, 0);
+
+    if (strcmp(sym->sym, "&") == 0) {
+      if (f->formals->count != 1) {
+        lval_del(a);
+        return lval_err("Function format invalid. "
+                        "Symbol '&' not followed by single symbol.");
+      }
+      lval *nsym = lval_pop(f->formals, 0);
+      lenv_put(f->env, nsym, builtin_list(e, a));
+      lval_del(sym);
+      lval_del(nsym);
+      break;
+    }
+
     lenv_put(f->env, sym, val);
     lval_del(sym);
     lval_del(val);
   }
   lval_del(a);
+
+  if (f->formals->count > 0 && strcmp(f->formals->cell[0]->sym, "&") == 0) {
+    if (f->formals->count != 2) {
+      return lval_err("Function format invalid. "
+                      "Symbol '&' not followed by single symbol.");
+    }
+
+    lval_del(lval_pop(f->formals, 0));
+    lval *sym = lval_pop(f->formals, 0);
+    lval *val = lval_qexpr();
+    lenv_put(f->env, sym, val);
+    lval_del(sym);
+    lval_del(val);
+  }
+
   if (f->formals->count == 0) {
     f->env->par = e;
     return builtin_eval(f->env, lval_add(lval_sexpr(), lval_copy(f->body)));
@@ -355,4 +384,37 @@ char *ltype_name(int t) {
   default:
     return "Unknown";
   }
+}
+
+int lval_eq(lval *x, lval *y) {
+  if (x->type != y->type) {
+    return 0;
+  }
+  switch (x->type) {
+  case LVAL_NUM:
+    return (x->num == y->num);
+  case LVAL_ERR:
+    return (strcmp(x->err, y->err) == 0);
+  case LVAL_SYM:
+    return (strcmp(x->sym, y->sym) == 0);
+  case LVAL_FUN:
+    if (x->builtin || y->builtin) {
+      return x->builtin == y->builtin;
+    } else {
+      return lval_eq(x->formals, y->formals) && lval_eq(x->body, y->body);
+    }
+  case LVAL_QEXPR:
+  case LVAL_SEXPR:
+    if (x->count != y->count) {
+      return 0;
+    }
+    for (int i = 0; i < x->count; i++) {
+      if (!lval_eq(x->cell[i], y->cell[i])) {
+        return 0;
+      }
+    }
+    return 1;
+    break;
+  }
+  return 0;
 }

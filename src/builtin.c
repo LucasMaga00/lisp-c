@@ -178,3 +178,107 @@ lval *builtin_lambda(lenv *e, lval *a) {
 
   return lval_lambda(formals, body);
 }
+
+lval *builtin_fun(lenv *e, lval *a) {
+  LASSERT_NUM("fun", a, 2);
+  LASSERT_TYPE("fun", a, 0, LVAL_QEXPR);
+  LASSERT_TYPE("fun", a, 1, LVAL_QEXPR);
+
+  lval *signature = a->cell[0];
+
+  LASSERT(a, signature->count > 0, "Function 'fun' requires a function name.");
+
+  for (int i = 0; i < signature->count; i++) {
+    LASSERT(a, signature->cell[i]->type == LVAL_SYM,
+            "Function 'fun' requires symbols in its signature.");
+  }
+
+  for (int i = 1; i < signature->count; i++) {
+    if (strcmp(signature->cell[i]->sym, "&") == 0) {
+      LASSERT(a, i == signature->count - 2,
+              "Symbol '&' must precede one final parameter.");
+      LASSERT(a, strcmp(signature->cell[i + 1]->sym, "&") != 0,
+              "Symbol '&' requires a parameter name.");
+    }
+  }
+  lval *formals = lval_pop(a, 0);
+  lval *body = lval_pop(a, 0);
+  lval_del(a);
+
+  lval *name = lval_pop(formals, 0);
+  lval *function = lval_lambda(formals, body);
+
+  lenv_def(e, name, function);
+  lval_del(name);
+  lval_del(function);
+
+  return lval_sexpr();
+}
+
+static lval *builtin_ord(lenv *e, lval *a, char *op) {
+  LASSERT_NUM(op, a, 2);
+  LASSERT_TYPE(op, a, 0, LVAL_NUM);
+  LASSERT_TYPE(op, a, 1, LVAL_NUM);
+
+  int r;
+
+  if (strcmp(op, ">") == 0) {
+    r = (a->cell[0]->num > a->cell[1]->num);
+  }
+  if (strcmp(op, "<") == 0) {
+    r = (a->cell[0]->num < a->cell[1]->num);
+  }
+  if (strcmp(op, ">=") == 0) {
+    r = (a->cell[0]->num >= a->cell[1]->num);
+  }
+  if (strcmp(op, "<=") == 0) {
+    r = (a->cell[0]->num <= a->cell[1]->num);
+  }
+  lval_del(a);
+  return lval_num(r);
+}
+
+lval *builtin_gt(lenv *e, lval *a) { return builtin_ord(e, a, ">"); }
+lval *builtin_lt(lenv *e, lval *a) { return builtin_ord(e, a, "<"); }
+lval *builtin_ge(lenv *e, lval *a) { return builtin_ord(e, a, ">="); }
+lval *builtin_le(lenv *e, lval *a) { return builtin_ord(e, a, "<="); }
+
+lval *builtin_cmp(lenv *e, lval *a, char *op) {
+  LASSERT_NUM(op, a, 2);
+
+  int r;
+
+  if (strcmp(op, "==") == 0) {
+    r = lval_eq(a->cell[0], a->cell[1]);
+  }
+
+  if (strcmp(op, "!=") == 0) {
+    r = !lval_eq(a->cell[0], a->cell[1]);
+  }
+
+  lval_del(a);
+  return lval_num(r);
+}
+
+lval *builtin_eq(lenv *e, lval *a) { return builtin_cmp(e, a, "=="); }
+lval *builtin_ne(lenv *e, lval *a) { return builtin_cmp(e, a, "!="); }
+
+lval *builtin_if(lenv *e, lval *a) {
+  LASSERT_NUM("if", a, 3);
+  LASSERT_TYPE("if", a, 0, LVAL_NUM);
+  LASSERT_TYPE("if", a, 1, LVAL_QEXPR);
+  LASSERT_TYPE("if", a, 2, LVAL_QEXPR);
+
+  lval *x;
+  a->cell[1]->type = LVAL_SEXPR;
+  a->cell[2]->type = LVAL_SEXPR;
+
+  if (a->cell[0]->num) {
+    x = lval_eval(e, lval_pop(a, 1));
+  } else {
+    x = lval_eval(e, lval_pop(a, 2));
+  }
+
+  lval_del(a);
+  return x;
+}
