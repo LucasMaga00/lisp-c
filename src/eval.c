@@ -249,7 +249,6 @@ static lval *lval_call(lenv *e, lval *f, lval *a) {
                       given, total);
     }
     lval *sym = lval_pop(f->formals, 0);
-    lval *val = lval_pop(a, 0);
 
     if (strcmp(sym->sym, "&") == 0) {
       if (f->formals->count != 1) {
@@ -264,6 +263,7 @@ static lval *lval_call(lenv *e, lval *f, lval *a) {
       break;
     }
 
+    lval *val = lval_pop(a, 0);
     lenv_put(f->env, sym, val);
     lval_del(sym);
     lval_del(val);
