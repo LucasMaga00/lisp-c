@@ -28,18 +28,20 @@ int main(void) {
   mpc_parser_t *Qexpr = mpc_new("qexpr");
   mpc_parser_t *Expr = mpc_new("expr");
   mpc_parser_t *Lispy = mpc_new("lispy");
+  mpc_parser_t *String = mpc_new("string");
 
-  mpca_lang(MPCA_LANG_DEFAULT, "                                             \
-    number   : /-?[0-9]+/ ;                               \
-    symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&|]+/           \
-             | \"join\" | \"eval\" | \"list\"             \
-             | \"head\" | \"tail\" ;                      \
-    sexpr    : '(' <expr>* ')' ;                          \
-    qexpr    : '{' <expr>* '}' ;                          \
-    expr     : <number> | <symbol> | <sexpr> | <qexpr> ;  \
-    lispy    : /^/ <expr>* /$/ ;                          \
+  mpca_lang(MPCA_LANG_DEFAULT, "                                     \
+    number   : /-?[0-9]+/ ;                                          \
+    symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&|]+/                     \
+             | \"join\" | \"eval\" | \"list\"                        \
+             | \"head\" | \"tail\" ;                                 \
+    sexpr    : '(' <expr>* ')' ;                                     \
+    qexpr    : '{' <expr>* '}' ;                                     \
+    expr     : <number> | <symbol> | <sexpr> | <qexpr> | <string> ;  \
+    lispy    : /^/ <expr>* /$/ ;                                     \
+    string : /\"(\\\\.|[^\"])*\"/ ;                                  \
   ",
-            Number, Symbol, Sexpr, Qexpr, Expr, Lispy);
+            Number, Symbol, Sexpr, Qexpr, Expr, Lispy, String);
 
   puts("Lispy Version 0.0.0.0.5");
   puts("Press Ctrl+c to Exit\n");
@@ -75,6 +77,6 @@ int main(void) {
   history_end(hist);
   el_end(el);
 
-  mpc_cleanup(6, Number, Symbol, Sexpr, Qexpr, Expr, Lispy);
+  mpc_cleanup(7, Number, Symbol, Sexpr, Qexpr, Expr, Lispy, String);
   return 0;
 }

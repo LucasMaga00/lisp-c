@@ -4,7 +4,15 @@
 #include "mpc.h"
 #include "types.h"
 
-enum { LVAL_NUM, LVAL_ERR, LVAL_SYM, LVAL_SEXPR, LVAL_QEXPR, LVAL_FUN };
+enum {
+  LVAL_NUM,
+  LVAL_ERR,
+  LVAL_SYM,
+  LVAL_SEXPR,
+  LVAL_QEXPR,
+  LVAL_FUN,
+  LVAL_STR
+};
 
 struct lval {
   int type;
@@ -13,6 +21,7 @@ struct lval {
   long num;
   char *err;
   char *sym;
+  char *str;
 
   // Function
   lbuiltin builtin;
@@ -33,6 +42,7 @@ lval *lval_sym(char *s);
 lval *lval_sexpr(void);
 lval *lval_fun(lbuiltin funk);
 lval *lval_lambda(lval *formals, lval *body);
+lval *lval_str(char *s);
 lval *lval_read(mpc_ast_t *t);
 lval *lval_add(lval *v, lval *x);
 lval *lval_pop(lval *v, int i);

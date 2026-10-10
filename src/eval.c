@@ -1,6 +1,7 @@
 #include "eval.h"
 #include "builtin.h"
 #include "env.h"
+#include "mpc.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -127,10 +128,28 @@ lval *lval_lambda(lval *formals, lval *body) {
   return v;
 }
 
+lval *lval_str(char *s) {
+  lval *v = malloc(sizeof(lval));
+  v->type = LVAL_STR;
+  v->str = malloc(strlen(s) + 1);
+  strcpy(v->str, s);
+  return v;
+}
+
 static lval *lval_read_num(mpc_ast_t *t) {
   errno = 0;
   long x = strtol(t->contents, NULL, 10);
   return errno != ERANGE ? lval_num(x) : lval_err("invalid number");
+}
+
+static lval *lval_read_str(mpc_ast_t *t) {
+  t->contents[strlen(t->contents) - 1] = '\0';
+  char *unescaped = malloc(strlen(t->contents + 1) + 1);
+  strcpy(unescaped, t->contents + 1);
+  unescaped = mpcf_unescape(unescaped);
+  lval *str = lval_str(unescaped);
+  free(unescaped);
+  return str;
 }
 
 lval *lval_read(mpc_ast_t *t) {
@@ -139,6 +158,9 @@ lval *lval_read(mpc_ast_t *t) {
   }
   if (strstr(t->tag, "symbol")) {
     return lval_sym(t->contents);
+  }
+  if (strstr(t->tag, "string")) {
+    return lval_read_str(t);
   }
 
   lval *x = NULL;
@@ -228,6 +250,10 @@ lval *lval_copy(lval *v) {
       x->cell[i] = lval_copy(v->cell[i]);
     }
     break;
+  case LVAL_STR:
+    x->str = malloc(strlen(v->str) + 1);
+    strcpy(x->str, v->str);
+    break;
   }
 
   return x;
@@ -303,6 +329,14 @@ static void lval_expr_print(lval *v, char open, char close) {
   putchar(close);
 }
 
+static void lval_print_str(lval *v) {
+  char *escaped = malloc(strlen(v->str) + 1);
+  strcpy(escaped, v->str);
+  escaped = mpcf_escape(escaped);
+  printf("\"%s\"", escaped);
+  free(escaped);
+}
+
 static void lval_print(lval *v) {
   switch (v->type) {
   case LVAL_NUM:
@@ -330,6 +364,9 @@ static void lval_print(lval *v) {
       lval_print(v->body);
       putchar(')');
     }
+    break;
+  case LVAL_STR:
+    lval_print_str(v);
     break;
   }
 }
@@ -363,6 +400,9 @@ void lval_del(lval *v) {
       lval_del(v->body);
     }
     break;
+  case LVAL_STR:
+    free(v->str);
+    break;
   }
   free(v);
 }
@@ -381,6 +421,8 @@ char *ltype_name(int t) {
     return "S-Expression";
   case LVAL_QEXPR:
     return "Q-Expression";
+  case LVAL_STR:
+    return "String";
   default:
     return "Unknown";
   }
@@ -415,6 +457,8 @@ int lval_eq(lval *x, lval *y) {
     }
     return 1;
     break;
+  case LVAL_STR:
+    return (strcmp(x->str, y->str) == 0);
   }
-  return 0;
+  return 1;
 }
