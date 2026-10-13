@@ -51,6 +51,7 @@ lval *lval_copy(lval *v);
 
 int lval_eq(lval *x, lval *y);
 
+void lval_print(lval *v);
 void lval_println(lval *v);
 void lval_del(lval *v);
 

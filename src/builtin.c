@@ -1,11 +1,12 @@
 #include "builtin.h"
 #include "env.h"
 #include "eval.h"
+#include "mpc.h"
 #include <string.h>
 
-#define LASSERT(args, cond, fmt, ...)                                          \
+#define LASSERT(args, cond, ...)                                               \
   if (!(cond)) {                                                               \
-    lval *err = lval_err(fmt, ##__VA_ARGS__);                                  \
+    lval *err = lval_err(__VA_ARGS__);                                          \
     lval_del(args);                                                            \
     return err;                                                                \
   }
@@ -24,6 +25,7 @@
           ltype_name(expected))
 
 static lval *builtin_op(lenv *e, lval *a, char *op) {
+  (void)e;
   for (int i = 0; i < a->count; i++) {
     if (a->cell[i]->type != LVAL_NUM) {
       lval_del(a);
@@ -64,6 +66,7 @@ static lval *builtin_op(lenv *e, lval *a, char *op) {
 }
 
 lval *builtin_head(lenv *e, lval *a) {
+  (void)e;
   LASSERT(a, a->count == 1,
           "Function 'head' passed incorrect number of arguments! "
           "Got %i, Expected %i.",
@@ -82,6 +85,7 @@ lval *builtin_head(lenv *e, lval *a) {
 }
 
 lval *builtin_tail(lenv *e, lval *a) {
+  (void)e;
   LASSERT(a, a->count == 1, "Function 'tail' passed too many arguments!");
   LASSERT(a, a->cell[0]->type == LVAL_QEXPR,
           "Function 'tail' passed incorrect types!");
@@ -93,6 +97,7 @@ lval *builtin_tail(lenv *e, lval *a) {
 }
 
 lval *builtin_list(lenv *e, lval *a) {
+  (void)e;
   a->type = LVAL_QEXPR;
   return a;
 }
@@ -108,6 +113,7 @@ lval *builtin_eval(lenv *e, lval *a) {
 }
 
 lval *builtin_join(lenv *e, lval *a) {
+  (void)e;
   for (int i = 0; i < a->count; i++) {
     LASSERT(a, a->cell[i]->type == LVAL_QEXPR,
             "Function 'join' passed incorrect types!");
@@ -163,6 +169,7 @@ lval *builtin_def(lenv *e, lval *a) { return builtin_var(e, a, "def"); }
 lval *builtin_put(lenv *e, lval *a) { return builtin_var(e, a, "="); }
 
 lval *builtin_lambda(lenv *e, lval *a) {
+  (void)e;
   LASSERT_NUM("\\", a, 2);
   LASSERT_TYPE("\\", a, 0, LVAL_QEXPR);
   LASSERT_TYPE("\\", a, 1, LVAL_QEXPR);
@@ -216,6 +223,7 @@ lval *builtin_fun(lenv *e, lval *a) {
 }
 
 static lval *builtin_ord(lenv *e, lval *a, char *op) {
+  (void)e;
   LASSERT_NUM(op, a, 2);
   LASSERT_TYPE(op, a, 0, LVAL_NUM);
   LASSERT_TYPE(op, a, 1, LVAL_NUM);
@@ -244,6 +252,7 @@ lval *builtin_ge(lenv *e, lval *a) { return builtin_ord(e, a, ">="); }
 lval *builtin_le(lenv *e, lval *a) { return builtin_ord(e, a, "<="); }
 
 lval *builtin_cmp(lenv *e, lval *a, char *op) {
+  (void)e;
   LASSERT_NUM(op, a, 2);
 
   int r;
@@ -264,6 +273,7 @@ lval *builtin_eq(lenv *e, lval *a) { return builtin_cmp(e, a, "=="); }
 lval *builtin_ne(lenv *e, lval *a) { return builtin_cmp(e, a, "!="); }
 
 lval *builtin_or(lenv *e, lval *a) {
+  (void)e;
   LASSERT_NUM("||", a, 2);
   LASSERT_TYPE("||", a, 0, LVAL_NUM);
   LASSERT_TYPE("||", a, 1, LVAL_NUM);
@@ -274,6 +284,7 @@ lval *builtin_or(lenv *e, lval *a) {
 }
 
 lval *builtin_and(lenv *e, lval *a) {
+  (void)e;
   LASSERT_NUM("&&", a, 2);
   LASSERT_TYPE("&&", a, 0, LVAL_NUM);
   LASSERT_TYPE("&&", a, 1, LVAL_NUM);
@@ -284,6 +295,7 @@ lval *builtin_and(lenv *e, lval *a) {
 }
 
 lval *builtin_not(lenv *e, lval *a) {
+  (void)e;
   LASSERT_NUM("!", a, 1);
   LASSERT_TYPE("!", a, 0, LVAL_NUM);
 
@@ -310,4 +322,60 @@ lval *builtin_if(lenv *e, lval *a) {
 
   lval_del(a);
   return x;
+}
+
+lval *builtin_load(lenv *e, lval *a) {
+  LASSERT_NUM("load", a, 1);
+  LASSERT_TYPE("load", a, 0, LVAL_STR);
+
+  mpc_result_t r;
+
+  if (mpc_parse_contents(a->cell[0]->str, Lispy, &r)) {
+    lval *expr = lval_read(r.output);
+    mpc_ast_delete(r.output);
+
+    while (expr->count) {
+      lval *x = lval_eval(e, lval_pop(expr, 0));
+      if (x->type == LVAL_ERR) {
+        lval_println(x);
+      }
+      lval_del(x);
+    }
+    lval_del(expr);
+    lval_del(a);
+
+    return lval_sexpr();
+  } else {
+    char *err_msg = mpc_err_string(r.error);
+    mpc_err_delete(r.error);
+
+    lval *err = lval_err("Could not load Library %s", err_msg);
+    free(err_msg);
+    lval_del(a);
+
+    return err;
+  }
+}
+
+lval *builtin_print(lenv *e, lval *a) {
+  (void)e;
+  for (int i = 0; i < a->count; i++) {
+    lval_print(a->cell[i]);
+    putchar(' ');
+  }
+
+  putchar('\n');
+  lval_del(a);
+  return lval_sexpr();
+}
+
+lval *builtin_error(lenv *e, lval *a) {
+  (void)e;
+  LASSERT_NUM("error", a, 1);
+  LASSERT_TYPE("error", a, 0, LVAL_STR);
+
+  lval *err = lval_err(a->cell[0]->str);
+
+  lval_del(a);
+  return err;
 }

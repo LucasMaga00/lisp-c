@@ -6,7 +6,7 @@
 #include <string.h>
 
 static lval *lval_call(lenv *e, lval *f, lval *a);
-static void lval_print(lval *v);
+void lval_print(lval *v);
 
 static lval *lval_eval_sexpr(lenv *e, lval *v) {
   for (int i = 0; i < v->count; i++) {
@@ -190,6 +190,10 @@ lval *lval_read(mpc_ast_t *t) {
     if (strcmp(t->children[i]->tag, "regex") == 0) {
       continue;
     }
+    if (strstr(t->children[i]->tag, "comment")) {
+      continue;
+    }
+
     x = lval_add(x, lval_read(t->children[i]));
   }
   return x;
@@ -337,7 +341,7 @@ static void lval_print_str(lval *v) {
   free(escaped);
 }
 
-static void lval_print(lval *v) {
+void lval_print(lval *v) {
   switch (v->type) {
   case LVAL_NUM:
     printf("%li", v->num);
