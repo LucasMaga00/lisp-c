@@ -1,0 +1,18 @@
+# Compiled executables
+/program
+/src/program
+
+# Build and debug outputs
+*.o
+*.dSYM/
+
+# Local compiler database (contains absolute paths)
+/compile_commands.json
+
+# macOS files
+.DS_Store
+
+# Vim temporary files
+*.swp
+*.swo
+*~
